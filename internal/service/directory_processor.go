@@ -556,14 +556,8 @@ func writeJavSidecars(videoPath string, item *models.Jav, coverDir string) error
 	}
 
 	if coverPath, ok := manager.FindCoverPath(coverDir, item.Code); ok {
-		posterPath := base + "-poster" + strings.ToLower(filepath.Ext(coverPath))
-		if _, err := os.Stat(posterPath); err == nil && !owned {
-			return nil
-		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("inspect poster: %w", err)
-		}
-		if err := copyFileAtomically(coverPath, posterPath); err != nil {
-			return fmt.Errorf("write poster: %w", err)
+		if err := writeJavArtwork(coverPath, base, owned); err != nil {
+			return err
 		}
 	} else if common.CoverManager != nil {
 		common.CoverManager.Enqueue(item.Code)
