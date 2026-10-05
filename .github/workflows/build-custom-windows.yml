@@ -1,0 +1,49 @@
+name: build custom Windows release
+
+on:
+  push:
+    branches:
+      - "release/v1.9-custom"
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NODE_VERSION: "23.11.0"
+  CUSTOM_VERSION: "v1.9.1-poster.1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            scripts/cli/package-lock.json
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 zip unzip
+      - name: Test
+        run: go test ./...
+      - name: Build CLI bundle
+        run: |
+          cd scripts/cli
+          npm install
+          npm run build
+      - name: Download runtime dependencies
+        run: bash scripts/cli.sh download windows-x86_64
+      - name: Build Windows release
+        run: bash scripts/cli.sh release windows-x86_64 "${CUSTOM_VERSION}"
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v6
+        with:
+          name: javboss-${{ env.CUSTOM_VERSION }}-windows-x86_64
+          path: release/javboss-${{ env.CUSTOM_VERSION }}-windows-x86_64
